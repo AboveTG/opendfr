@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenDFR | Municipal Drone &amp; Incident Transparency Registry</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <div>
+        <h1>OpenDFR <span class="title-tag">// Public Airspace Ledger</span></h1>
+        <p class="subtitle">
+          Cross-reference public Drone-as-First-Responder flight logs with municipal crime &amp; CAD incident datasets
+        </p>
+      </div>
+      <div class="header-actions">
+        <span class="privacy-badge" title="All queries execute directly from your browser. Zero external tracking or proxy servers.">
+          100% Client-Side
+        </span>
+        <button id="openBuilderBtn" class="btn btn-primary" type="button">
+          + Add / Configure City
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card control-panel" aria-label="Agency and Data Controls">
+      <div class="control-grid">
+        <div class="field-group">
+          <label for="agencySelect">1. Select Law Enforcement Agency</label>
+          <select id="agencySelect"></select>
+          <div class="agency-links">
+            <a id="skydioPortalLink" href="#" target="_blank" rel="noopener noreferrer">Open Skydio Dashboard ↗</a>
+            <span>•</span>
+            <a id="recordsPortalLink" href="#" target="_blank" rel="noopener noreferrer">Public Records Portal ↗</a>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="skydioFileInput">2. Load Skydio Flight Log (.json)</label>
+          <input type="file" id="skydioFileInput" accept=".json,application/json" />
+          <small class="hint">
+            Captured from Skydio Transparency Dashboard XHR/Fetch JSON payload
+          </small>
+        </div>
+
+        <div class="field-group" id="csvFallbackGroup" hidden>
+          <label for="localCsvInput">3. Local Incident CSV (Static Dataset Mode)</label>
+          <input type="file" id="localCsvInput" accept=".csv,text/csv" />
+          <small class="hint">Required when agency backend is configured for Static CSV</small>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="filter-controls">
+          <input
+            type="search"
+            id="searchFilter"
+            placeholder="Filter by Case ID, purpose, incident type, source, or block..."
+            aria-label="Filter correlated results"
+          />
+          <label class="checkbox-label">
+            <input type="checkbox" id="unmatchedOnlyToggle" />
+            Show Unmatched / Restricted Calls Only
+          </label>
+        </div>
+
+        <div class="export-controls">
+          <button id="exportCsvBtn" class="btn btn-secondary" type="button" disabled>
+            Export CSV
+          </button>
+          <button id="exportJsonBtn" class="btn btn-secondary" type="button" disabled>
+            Export JSON
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats-bar" aria-label="Correlation Summary">
+      <div class="stat-card">
+        <span class="stat-label">Total Drone Flights</span>
+        <span class="stat-value" id="statTotal">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Resolved (Crime + CAD)</span>
+        <span class="stat-value stat-matched" id="statMatched">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Unmatched (FOIA Eligible)</span>
+        <span class="stat-value stat-unmatched" id="statUnmatched">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Backend Status</span>
+        <span class="stat-value stat-status" id="statStatus">Ready</span>
+      </div>
+    </section>
+
+    <section class="card table-wrapper">
+      <table id="resultsTable">
+        <thead>
+          <tr>
+            <th>Takeoff</th>
+            <th>Duration</th>
+            <th>Case ID</th>
+            <th>Statutory / Stated Purpose</th>
+            <th>Resolved Incident / Call Type</th>
+            <th>Data Source</th>
+            <th>Block / Sector</th>
+            <th>Audit Action</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody">
+          <tr class="empty-row">
+            <td colspan="8">
+              Select an agency above and load a Skydio Transparency JSON export to begin cross-referencing.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- Custom City / Agency Config Builder Modal -->
+  <dialog id="agencyBuilderModal" class="modal" aria-labelledby="modalTitle">
+    <form id="agencyBuilderForm" method="dialog" class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h2 id="modalTitle">Add or Configure Municipal DFR Agency</h2>
+          <p class="modal-subtitle">
+            Connect any Skydio Transparency Dashboard to a city or county open-data endpoint
+          </p>
+        </div>
+        <button type="button" id="closeModalBtn" class="btn-icon" aria-label="Close modal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <fieldset class="form-section">
+          <legend>1. Department &amp; Skydio Dashboard Details</legend>
+          <div class="form-grid-2">
+            <div class="field-group">
+              <label for="cfgName">Agency Name *</label>
+              <input type="text" id="cfgName" required placeholder="e.g., Chula Vista Police Department" />
+            </div>
+            <div class="field-group">
+              <label for="cfgState">State / Territory *</label>
+              <input type="text" id="cfgState" required maxlength="2" placeholder="e.g., CA" />
+            </div>
+            <div class="field-group">
+              <label for="cfgSkydioSlug">Skydio Dashboard Slug *</label>
+              <input type="text" id="cfgSkydioSlug" required placeholder="e.g., cvpd (from cloud.skydio.com/dashboard/cvpd)" />
+            </div>
+            <div class="field-group">
+              <label for="cfgRecordsUrl">Public Records / FOIA Portal URL *</label>
+              <input type="url" id="cfgRecordsUrl" required placeholder="https://..." />
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="form-section">
+          <legend>2. Municipal Open Data Backend</legend>
+          <div class="form-grid-2">
+            <div class="field-group">
+              <label for="cfgBackendType">Open Data Platform *</label>
+              <select id="cfgBackendType">
+                <option value="arcgis">Esri ArcGIS REST FeatureServer</option>
+                <option value="socrata">Socrata Open Data API (SODA)</option>
+                <option value="csv">Static CSV Upload (No Live API)</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label for="cfgCaseNumeric">Case ID Data Type *</label>
+              <select id="cfgCaseNumeric">
+                <option value="true">Numeric (e.g., 26203285)</option>
+                <option value="false">String / Alphanumeric (e.g., 2026-10492A)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group" id="cfgEndpointGroup">
+            <label for="cfgEndpoint">REST / SODA Query Endpoint URL *</label>
+            <input
+              type="url"
+              id="cfgEndpoint"
+              placeholder="https://services1.arcgis.com/.../FeatureServer/0/query"
+            />
+            <small class="hint">
+              ArcGIS URLs must end in <code>/query</code>; Socrata URLs must end in <code>.json</code>
+            </small>
+          </div>
+        </fieldset>
+
+        <fieldset class="form-section">
+          <legend>3. Dataset Column Mapping (Exact API Field Names)</legend>
+          <div class="form-grid-3">
+            <div class="field-group">
+              <label for="mapCaseId">Case / Report ID Field *</label>
+              <input type="text" id="mapCaseId" required placeholder="CASE_NUMBER" />
+            </div>
+            <div class="field-group">
+              <label for="mapDate">Date / Timestamp Field *</label>
+              <input type="text" id="mapDate" required placeholder="DATE" />
+            </div>
+            <div class="field-group">
+              <label for="mapIncident">Offense / Incident Field *</label>
+              <input type="text" id="mapIncident" required placeholder="INCIDENT" />
+            </div>
+            <div class="field-group">
+              <label for="mapLocation">Block / Address Field</label>
+              <input type="text" id="mapLocation" placeholder="BLOCK" />
+            </div>
+            <div class="field-group">
+              <label for="mapDistrict">District / Beat / Grid Field</label>
+              <input type="text" id="mapDistrict" placeholder="NEIGHBORHOOD_NAME" />
+            </div>
+            <div class="field-group">
+              <label for="mapDisposition">Disposition / Status Field</label>
+              <input type="text" id="mapDisposition" placeholder="CALL_DISPOSITION" />
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="json-preview-box">
+          <div class="preview-header">
+            <span>Generated <code>agencies.json</code> Entry (Ready for GitHub PR)</span>
+            <button type="button" id="copyConfigJsonBtn" class="btn btn-small">Copy JSON</button>
+          </div>
+          <pre id="configJsonPreview">{}</pre>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="testEndpointBtn" class="btn btn-secondary">
+          Test Endpoint Connection
+        </button>
+        <div class="footer-right">
+          <button type="button" id="cancelModalBtn" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Agency Locally</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

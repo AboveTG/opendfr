@@ -1,0 +1,50 @@
+---
+
+### 3. Agency Registry (`docs/registry/agencies.json`)
+
+Pre-configured with **St. Paul Police Department** chained to both SPPD's ArcGIS Crime Incident Report API and Ramsey County's Socrata ECC CAD dataset (`khr9-xwfu`), plus clean reference templates.
+
+```json
+{
+  "agencies": [
+    {
+      "id": "st-paul-mn",
+      "name": "St. Paul Police Department",
+      "state": "MN",
+      "skydioSlug": "sppd",
+      "skydioDashboardUrl": "https://cloud.skydio.com/dashboard/sppd",
+      "publicRecordsUrl": "https://www.stpaul.gov/datarequest",
+      "backends": [
+        {
+          "label": "SPPD Crime Incident Report",
+          "type": "arcgis",
+          "endpoint": "https://services1.arcgis.com/9meaaHE3uiba0wd8/arcgis/rest/services/Crime_Incident_Report/FeatureServer/0/query",
+          "caseIdIsNumeric": true,
+          "fields": {
+            "caseId": "CASE_NUMBER",
+            "date": "DATE",
+            "incidentType": "INCIDENT",
+            "location": "BLOCK",
+            "district": "NEIGHBORHOOD_NAME",
+            "disposition": "CALL_DISPOSITION"
+          }
+        },
+        {
+          "label": "Ramsey County ECC Dispatch (CAD)",
+          "type": "socrata",
+          "endpoint": "https://opendata.ramseycountymn.gov/resource/khr9-xwfu.json",
+          "caseIdIsNumeric": false,
+          "matchMode": "contains_or_exact",
+          "fields": {
+            "caseId": "master_incident_number",
+            "date": "response_date",
+            "incidentType": "problem",
+            "location": "street_name",
+            "district": "division",
+            "disposition": "jurisdiction"
+          }
+        }
+      ]
+    }
+  ]
+}
